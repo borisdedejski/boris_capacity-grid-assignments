@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react'
 import { useTable } from '@tanstack/react-table'
 import type { Header } from '@tanstack/react-table'
-import { useVirtualizer } from '@tanstack/react-virtual'
+import { observeElementRect, useVirtualizer } from '@tanstack/react-virtual'
 import { ArrowDown, ArrowUp, ArrowUpDown, Search, TriangleAlert } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -64,9 +64,12 @@ export function CapacityGrid({ from, to }: Props) {
     estimateSize: () => ROW_HEIGHT,
     getItemKey: (index) => tableRows[index]!.id,
     overscan: 8,
-    // Until the scroll box is measured (and always under jsdom), size a
-    // window of rows rather than none.
+    // A scroll box that measures 0 × 0 (not laid out yet, and always under
+    // jsdom) keeps this estimate; the virtualizer would otherwise render no
+    // rows at all, because it treats a zero-height viewport as empty.
     initialRect: { width: 1200, height: 720 },
+    observeElementRect: (instance, cb) =>
+      observeElementRect(instance, (rect) => cb(rect.height > 0 ? rect : instance.options.initialRect)),
   })
 
   if (query.isPending) return <GridSkeleton />
@@ -289,6 +292,9 @@ function Legend() {
       </span>
       <span className="flex items-center gap-1.5">
         <span className="h-1 w-6 rounded-full bg-foreground/50" /> share of capacity
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span className="font-medium text-emerald-700">Free</span> nothing scheduled
       </span>
       <span className="ml-auto">Click a week for its projects. Click the capacity, or double-click a row, to change weekly hours.</span>
     </div>

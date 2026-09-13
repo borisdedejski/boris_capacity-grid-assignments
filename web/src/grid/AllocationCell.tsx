@@ -29,7 +29,7 @@ export function AllocationCell({ person, week, allocated }: Props) {
   const capacity = person.weeklyHours
   const status = allocationStatus(allocated, capacity)
   const ratio = utilization(allocated, capacity)
-  const fill = ratio === null ? (allocated > 0 ? 100 : 0) : Math.min(ratio, 1) * 100
+  const fill = ratio === null ? 100 : Math.min(ratio, 1) * 100
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -42,36 +42,52 @@ export function AllocationCell({ person, week, allocated }: Props) {
             status === 'full' && 'bg-amber-50/70',
           )}
           aria-label={`${person.name}, week of ${formatDayMonth(week.start)}: ${formatHours(allocated)} of ${formatHours(capacity)} hours. Show projects.`}
-          title={`${formatHours(allocated)} of ${formatHours(capacity)} h (${formatPercent(ratio)}) · click for projects`}
+          title={
+            status === 'empty'
+              ? `Free: nothing scheduled, ${formatHours(capacity)} h available · click for details`
+              : `${formatHours(allocated)} of ${formatHours(capacity)} h (${formatPercent(ratio)}) · click for projects`
+          }
           onDoubleClick={(e) => e.stopPropagation()}
         >
-          <span className="flex items-baseline gap-1.5 tabular-nums leading-none">
-            {status === 'over' && (
-              <span className="rounded bg-red-600 px-1 py-0.5 text-[10px] font-semibold text-white">
-                +{formatHours(allocated - capacity)} h
-              </span>
-            )}
-            <span
-              className={cn(
-                status === 'empty' && 'text-muted-foreground/50',
-                status === 'over' && 'font-semibold text-red-800',
-                status === 'full' && 'font-medium text-amber-900',
+          {status === 'empty' ? (
+            // Nothing scheduled. Said in words, with no bar, so it can't be
+            // mistaken for a cell that is still loading.
+            <span className="flex items-baseline gap-1.5 leading-none">
+              <span className="font-medium text-emerald-700">Free</span>
+              {capacity > 0 && (
+                <span className="text-xs text-muted-foreground tabular-nums">{formatHours(capacity)} h open</span>
               )}
-            >
-              {status === 'empty' ? '—' : `${formatHours(allocated)} h`}
             </span>
-          </span>
-          <span className="block h-1 w-20 overflow-hidden rounded-full bg-black/8" aria-hidden>
-            <span
-              className={cn(
-                'block h-full rounded-full transition-[width] duration-200 ease-out motion-reduce:transition-none',
-                status === 'over' && 'bg-red-600',
-                status === 'full' && 'bg-amber-500',
-                status === 'under' && 'bg-foreground/50',
-              )}
-              style={{ width: `${fill}%` }}
-            />
-          </span>
+          ) : (
+            <>
+              <span className="flex items-baseline gap-1.5 tabular-nums leading-none">
+                {status === 'over' && (
+                  <span className="rounded bg-red-600 px-1 py-0.5 text-[10px] font-semibold text-white">
+                    +{formatHours(allocated - capacity)} h
+                  </span>
+                )}
+                <span
+                  className={cn(
+                    status === 'over' && 'font-semibold text-red-800',
+                    status === 'full' && 'font-medium text-amber-900',
+                  )}
+                >
+                  {formatHours(allocated)} h
+                </span>
+              </span>
+              <span className="block h-1 w-20 overflow-hidden rounded-full bg-black/8" aria-hidden>
+                <span
+                  className={cn(
+                    'block h-full rounded-full transition-[width] duration-200 ease-out motion-reduce:transition-none',
+                    status === 'over' && 'bg-red-600',
+                    status === 'full' && 'bg-amber-500',
+                    status === 'under' && 'bg-foreground/50',
+                  )}
+                  style={{ width: `${fill}%` }}
+                />
+              </span>
+            </>
+          )}
         </button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-[26rem] max-w-[calc(100vw-2rem)]">

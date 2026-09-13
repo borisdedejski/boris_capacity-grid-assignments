@@ -79,3 +79,12 @@ left unfinished. Append as you go; a line or two per entry is right.
 - Search is debounced (200 ms) with the `useDebouncedCallback` hook from the test session; Enter and clearing the box apply at once. Before, every keystroke re-filtered and re-rendered the grid.
 - Under jsdom the scroll box has no size, so the virtualizer gets `initialRect` of 720 px: about 16 rows plus overscan render in tests. A test that needs more rows on screen at once should raise it or scroll.
 - Overwrote `CapacityGrid.tsx` wholesale for the virtualisation while the test session was editing the tree. Nothing of theirs was in that file at HEAD; their `HoursEditor.tsx` change (`noValidate` on the form) is untouched.
+- Empty week cells said "—" over an empty bar track, which looked like a skeleton still loading. They now read "Free" with the open hours ("Free · 40 h open") and no bar; the Peak column says "Free" instead of "—" too, and the legend explains it.
+
+## 2026-09-13 — Search debounce
+
+- The name search never called the API: it is a TanStack Table global filter over the rows already loaded. What ran on every keystroke was the filter plus a re-render of the whole grid. It now applies after a pause in typing (trailing, 200 ms); Enter and clearing the box apply at once, so an empty field never sits next to a filtered list.
+- `useDebouncedCallback` keeps the "table owns its state" decision: the debounced call still goes through `table.setGlobalFilter`. It runs the latest callback, exposes `flush`/`cancel`, and drops a pending call on unmount.
+- Search tests sit in `CapacityGrid.search.test.tsx` because `CapacityGrid.test.tsx` was being written by another session at the time; fold them in. They wait for `client.isFetching()` to reach 0 before counting requests, since the capacity hook prefetches the neighbouring weeks.
+- After the virtualisation commit every grid test found no rows: `@tanstack/virtual-core` returns no range when the scroll box measures 0 px high, jsdom always measures 0, and the first DOM measurement overwrites `initialRect`. The grid now keeps `initialRect` whenever the box measures 0 × 0 (custom `observeElementRect`). Same effect in a browser before layout: a window of rows instead of none.
+- Known: the "No one called …" empty state echoes the box's live text, not the applied filter, so for up to 200 ms it can name a term the rows don't reflect yet. `table.state.globalFilter` is the fix if it ever matters.

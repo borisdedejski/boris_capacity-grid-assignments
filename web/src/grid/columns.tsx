@@ -97,12 +97,12 @@ function PeakCell({ ratio }: { ratio: number }) {
     <div
       className={cn(
         'px-3 py-2 text-right tabular-nums',
-        ratio === 0 && 'text-muted-foreground/50',
+        ratio === 0 && 'text-muted-foreground',
         ratio === 1 && 'text-amber-900',
         over && 'font-semibold text-red-700',
       )}
     >
-      {ratio === 0 ? '—' : formatPercent(ratio)}
+      {ratio === 0 ? 'Free' : formatPercent(ratio)}
     </div>
   )
 }
