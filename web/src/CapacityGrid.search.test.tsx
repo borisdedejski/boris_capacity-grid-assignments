@@ -19,11 +19,14 @@ const personRow = (name: string) => screen.queryByRole('row', { name: new RegExp
 const searchBox = () => screen.getByRole('searchbox', { name: 'Find a person' })
 
 describe('CapacityGrid search', () => {
-  it('filters once typing pauses, not on every keystroke', async () => {
+  it('filters once typing pauses, not on every keystroke, and sends nothing', async () => {
     const api = fakeApi(team)
     const user = userEvent.setup()
-    renderWithClient(<CapacityGrid from="2026-01-05" to="2026-01-18" />)
+    const { client } = renderWithClient(<CapacityGrid from="2026-01-05" to="2026-01-18" />)
     await screen.findByRole('row', { name: /Ana Ferreira/ })
+    // Background loads of neighbouring ranges finish first, so the count is stable.
+    await waitFor(() => expect(client.isFetching()).toBe(0))
+    const requestsBefore = api.capacityRequests.length
 
     await user.type(searchBox(), 'eli')
     // Straight after the last keystroke nothing has changed yet...
@@ -34,7 +37,7 @@ describe('CapacityGrid search', () => {
     await waitFor(() => expect(personRow('Ana Ferreira')).not.toBeInTheDocument())
     expect(personRow('Bo Lindqvist')).not.toBeInTheDocument()
     expect(personRow('Eli Nakamura')).toBeInTheDocument()
-    expect(api.capacityRequests).toHaveLength(1)
+    expect(api.capacityRequests).toHaveLength(requestsBefore)
   })
 
   it('applies at once on Enter and when the box is cleared', async () => {

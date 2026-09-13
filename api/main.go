@@ -52,6 +52,7 @@ func (s *server) routes() *http.ServeMux {
 	mux.HandleFunc("GET /api/health", s.handleHealth)
 	mux.HandleFunc("GET /api/capacity", s.handleCapacity)
 	mux.HandleFunc("PATCH /api/people/{id}", s.handleUpdatePerson)
+	mux.HandleFunc("GET /api/people/{id}/allocations", s.handleAllocations)
 	mux.HandleFunc("GET /api/docs", handleDocs)
 	mux.HandleFunc("GET /api/openapi.yaml", handleOpenAPISpec)
 	return mux

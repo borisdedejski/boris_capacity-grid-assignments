@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Capacity API
-  version: 0.2.0
+  version: 0.3.0
   description: |
     Allocated hours against capacity, per person, per week.
     The grid in `web/src/CapacityGrid.tsx` is the consumer.
@@ -152,6 +152,62 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /api/people/{id}/allocations:
+    get:
+      operationId: getPersonAllocations
+      summary: One person's week, per project and weekday
+      description: |
+        The drill-down behind a grid cell: which projects fill the week and how
+        many hours land on each weekday. `week` may be any day and is widened to
+        the Monday–Sunday week containing it. Only Monday–Friday carry hours, as
+        in `/api/capacity`, so `days` always has five entries. Projects are sorted
+        by name; a week with nothing scheduled has an empty list.
+      tags: [People]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          example: 1
+        - name: week
+          in: query
+          required: true
+          description: Any day in the week, `YYYY-MM-DD`.
+          schema:
+            type: string
+            format: date
+          example: "2026-01-07"
+      responses:
+        "200":
+          description: The week and its projects.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AllocationsResponse"
+              example:
+                week: { start: "2026-01-05", end: "2026-01-11" }
+                projects:
+                  - { id: 1, name: "Atlas", days: [4, 4, 6, 4, 4] }
+                  - { id: 2, name: "Beacon", days: [0, 0, 0, 3, 3] }
+        "400":
+          description: The id is not a positive integer, or `week` is missing or not a date.
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: week must be a date (YYYY-MM-DD)
+        "404":
+          description: No person has this id.
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: person not found
+        "500":
+          $ref: "#/components/responses/InternalError"
+
 components:
   responses:
     InternalError:
@@ -215,6 +271,35 @@ components:
         allocated:
           type: array
           description: Allocated hours per week, positionally matching `weeks`.
+          items:
+            type: number
+            minimum: 0
+
+    AllocationsResponse:
+      type: object
+      required: [week, projects]
+      properties:
+        week:
+          $ref: "#/components/schemas/Week"
+        projects:
+          type: array
+          description: Sorted by name. Empty when nothing is scheduled.
+          items:
+            $ref: "#/components/schemas/ProjectAllocation"
+
+    ProjectAllocation:
+      type: object
+      required: [id, name, days]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        days:
+          type: array
+          description: Hours on Monday through Friday, in that order.
+          minItems: 5
+          maxItems: 5
           items:
             type: number
             minimum: 0

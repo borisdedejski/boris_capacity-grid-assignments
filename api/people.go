@@ -13,6 +13,15 @@ import (
 // maxWeeklyHours is the number of hours in a week; nobody has more capacity.
 const maxWeeklyHours = 168
 
+// personID reads the {id} path value of a /api/people/{id}... route.
+func personID(r *http.Request) (int, error) {
+	id, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil || id <= 0 {
+		return 0, errors.New("person id must be a positive integer")
+	}
+	return id, nil
+}
+
 type person struct {
 	ID          int     `json:"id"`
 	Name        string  `json:"name"`
@@ -30,9 +39,9 @@ type updatePersonRequest struct {
 // grid needs: allocations don't change, and capacity for every week is
 // weeklyHours.
 func (s *server) handleUpdatePerson(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.Atoi(r.PathValue("id"))
-	if err != nil || id <= 0 {
-		http.Error(w, "person id must be a positive integer", http.StatusBadRequest)
+	id, err := personID(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 

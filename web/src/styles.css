@@ -128,3 +128,17 @@
     @apply font-sans;
     }
 }
+/* Tailwind v4 stopped giving buttons a pointer cursor. Anything clickable
+   shows one, and a disabled control shows it is not. */
+@layer base {
+    button:not(:disabled),
+    [role="button"]:not(:disabled),
+    input[type="date"],
+    input[type="checkbox"] {
+        cursor: pointer;
+    }
+    button:disabled,
+    [role="button"][aria-disabled="true"] {
+        cursor: not-allowed;
+    }
+}

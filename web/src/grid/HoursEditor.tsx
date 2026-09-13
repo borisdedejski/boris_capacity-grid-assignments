@@ -77,6 +77,10 @@ export function HoursEditor({ person }: { person: PersonCapacity }) {
         <PopoverContent align="start" className="w-72">
           <form
             className="space-y-3"
+            // WeeklyHours in save() is the one check, with the app's own message.
+            // The input's max/step would otherwise block the submit with a native
+            // bubble, and step 0.5 would refuse decimals the API accepts.
+            noValidate
             onSubmit={(e) => {
               e.preventDefault()
               save()

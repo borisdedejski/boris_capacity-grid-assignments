@@ -53,7 +53,7 @@ export function buildColumns(weeks: Week[]) {
           </span>
         ),
         cell: (info) => (
-          <AllocationCell allocated={info.getValue()} capacity={info.row.original.weeklyHours} />
+          <AllocationCell person={info.row.original} week={week} allocated={info.getValue()} />
         ),
         sortFn: 'basic',
         sortDescFirst: true,

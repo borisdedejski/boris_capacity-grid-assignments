@@ -60,3 +60,22 @@ left unfinished. Append as you go; a line or two per entry is right.
 - No dark-mode variants on the red/amber classes: the app has no theme toggle (see the bootstrap entry).
 - Impeccable skill reported no PRODUCT.md and an available update (v4.3.1); skipped both to keep moving, worth a decision later.
 - Still not looked at in a browser this session: tsc passes and Vite transforms every module, but the visual check is the next thing to do.
+
+## 2026-09-13 — Week drill-down, navigation caching, cursors
+
+- Drill-down: `GET /api/people/{id}/allocations?week=` returns the week's projects with hours on Mon–Fri. Click a week cell to open it. Kept lean: one query grouped by project and day, no assignment ids, no editing.
+- Assumption in the drill-down: "free" and the red per-day totals take weekly hours spread evenly over five days (40 → 8 h/day). The schema has no per-day capacity; the popover says so in its footnote.
+- Caching: the capacity key is the whole weeks a range covers (Monday..Sunday), so two ranges that widen to the same weeks share a cache entry. `staleTime` 5 min / `gcTime` 30 min: stepping back to a loaded range renders from cache and sends nothing. Edits patch the cache, so staleness doesn't affect them; other people's edits show up on the next stale refetch.
+- Prefetch: once a range has loaded, the range one week earlier and one week later are fetched in the background, so the arrow buttons feel instant. Two bounded requests per settled range, deduped by the cache; never more.
+- Cursors: Tailwind v4 removed `cursor: pointer` from buttons, which is why nothing looked clickable. One base-layer rule in `styles.css` gives every enabled button, date input and checkbox a pointer and disabled buttons `not-allowed`. Week cells also show a ring on hover, the capacity button a stronger border.
+- A double-click on a week cell no longer opens the hours editor; the cell swallows it so only its own popover opens.
+
+## 2026-09-13 — Virtualised rows
+
+- The grid felt slow because all 500 rows were in the DOM, and each row mounted a Radix popover per week cell plus one for the editor and a tooltip: ~2,500 popover roots, all re-rendered on every keystroke in the search box or every sort. Rows are now virtualised with `@tanstack/react-virtual` 3.14.12 (spacer rows above and below the ~30 in view, so the `<table>` markup, sticky header, sticky first column and sticky footer all stay). Sorting and filtering still run over all 500 in the table; only rendering is windowed.
+- No pagination: a manager scans the whole team for red, and paging hides that. Virtualisation gives the same DOM cost as a page without hiding anyone.
+- Dropped `backdrop-blur` from the sticky header, footer and name column: a blur filter on sticky elements repaints on every scroll frame. Solid `bg-muted` instead.
+- A row that scrolls out of view unmounts, so an open week popover closes with it. Fine for now; if it ever matters, keep one popover at grid level anchored with a virtual ref.
+- Search is debounced (200 ms) with the `useDebouncedCallback` hook from the test session; Enter and clearing the box apply at once. Before, every keystroke re-filtered and re-rendered the grid.
+- Under jsdom the scroll box has no size, so the virtualizer gets `initialRect` of 720 px: about 16 rows plus overscan render in tests. A test that needs more rows on screen at once should raise it or scroll.
+- Overwrote `CapacityGrid.tsx` wholesale for the virtualisation while the test session was editing the tree. Nothing of theirs was in that file at HEAD; their `HoursEditor.tsx` change (`noValidate` on the form) is untouched.

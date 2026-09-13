@@ -25,7 +25,11 @@ how your API is design I think its improtant
 isolation and not trusting one side. So I'd use Zod to validate the schema on the FE. 
 - Tests: spec didn't specify test coverage, unit/integration/e2e test? 
 - display in a week range. But should it be possible in a month or ssomething. in day? what is a week range
-- should we write on which project the person is busy so that we get a celarer overivew?
+- should we write on which project the person is busy so that we get a better overview? I implemented a tooltip so you can see the hours implementaed
+about each day so you can see projects that they work on
+- loader on the table 
+- sorting / should we be able to sort / search 
+- do we want to know which project they are busy on 
 
 
 ## What did you notice that looked wrong?
@@ -45,6 +49,8 @@ One concrete example. Every real session has one.
 - not sortable table 
 - not to good for the eye
 - Did not did a clear overview of the days, took lot of space for the persons and not on the days which was not very usuable / visible by hear
+- search when you type it is immediatly sending a request instead of waiting the user to stop typing to send the request
+- filtering loading everything at once could be really heavy on the FE, we load 
 
 ## What would you do differently with a week?
 
