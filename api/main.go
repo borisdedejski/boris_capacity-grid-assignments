@@ -41,13 +41,20 @@ func main() {
 
 	s := &server{db: db}
 
+	log.Println("listening on :8080")
+	log.Fatal(http.ListenAndServe(":8080", s.routes()))
+}
+
+// routes registers every endpoint. Tests serve through it too, so they see the
+// same patterns and path values ({id}) as the running API.
+func (s *server) routes() *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/health", s.handleHealth)
 	mux.HandleFunc("GET /api/capacity", s.handleCapacity)
 	mux.HandleFunc("PATCH /api/people/{id}", s.handleUpdatePerson)
-
-	log.Println("listening on :8080")
-	log.Fatal(http.ListenAndServe(":8080", mux))
+	mux.HandleFunc("GET /api/docs", handleDocs)
+	mux.HandleFunc("GET /api/openapi.yaml", handleOpenAPISpec)
+	return mux
 }
 
 func (s *server) handleHealth(w http.ResponseWriter, r *http.Request) {

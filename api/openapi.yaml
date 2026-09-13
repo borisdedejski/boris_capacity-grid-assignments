@@ -1,0 +1,43 @@
+openapi: 3.1.0
+info:
+  title: Capacity API
+  version: 0.1.0
+  description: |
+    Allocated hours against capacity, per person, per week.
+    The grid in `web/src/CapacityGrid.tsx` is the consumer.
+
+paths:
+  /api/health:
+    get:
+      operationId: getHealth
+      summary: Health check
+      description: Confirms the API can reach the database and reports how many people are seeded.
+      tags: [System]
+      responses:
+        "200":
+          description: The database is reachable.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+              example:
+                ok: true
+                people: 500
+        "500":
+          description: The database query failed.
+          content:
+            text/plain:
+              schema:
+                type: string
+
+components:
+  schemas:
+    Health:
+      type: object
+      required: [ok, people]
+      properties:
+        ok:
+          type: boolean
+        people:
+          type: integer
+          description: Number of rows in `people`.
