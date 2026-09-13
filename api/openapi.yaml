@@ -1,10 +1,21 @@
 openapi: 3.1.0
 info:
   title: Capacity API
-  version: 0.1.0
+  version: 0.2.0
   description: |
     Allocated hours against capacity, per person, per week.
     The grid in `web/src/CapacityGrid.tsx` is the consumer.
+
+    **How a week is counted**
+
+    - A week runs Monday to Sunday. A requested range is widened to whole weeks,
+      and the response lists exactly the weeks it covers.
+    - Allocated hours count weekdays only. An assignment's `hours_per_day` applies
+      to each Monday–Friday it covers, and every assignment active on a day adds up.
+    - Capacity for every week is the person's `weeklyHours`, so it is reported once
+      per person rather than once per cell.
+
+    Errors are plain text with a 4xx/5xx status.
 
 paths:
   /api/health:
@@ -24,13 +35,132 @@ paths:
                 ok: true
                 people: 500
         "500":
-          description: The database query failed.
+          $ref: "#/components/responses/InternalError"
+
+  /api/capacity:
+    get:
+      operationId: getCapacity
+      summary: Allocated hours and capacity per person, per week
+      description: |
+        Returns every person with their allocated hours for each week that overlaps
+        `from`–`to` (inclusive). Both dates are widened to their Monday and Sunday, so
+        `from=2026-01-07&to=2026-01-15` reports the weeks starting 2026-01-05 and
+        2026-01-12, with whole-week totals. People are sorted by name.
+
+        `people[].allocated` is positional: entry `i` belongs to `weeks[i]`. A person
+        with nothing scheduled in a week has `0` there. A person is over-allocated in
+        a week when `allocated[i] > weeklyHours`; with `weeklyHours` of 0, any
+        allocation is over.
+      tags: [Capacity]
+      parameters:
+        - name: from
+          in: query
+          required: true
+          description: First day of the range, `YYYY-MM-DD`. Widened to its Monday.
+          schema:
+            type: string
+            format: date
+          example: "2026-01-05"
+        - name: to
+          in: query
+          required: true
+          description: Last day of the range, `YYYY-MM-DD`, inclusive. Widened to its Sunday.
+          schema:
+            type: string
+            format: date
+          example: "2026-01-18"
+      responses:
+        "200":
+          description: One entry per person, with one allocated total per week.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CapacityResponse"
+              example:
+                weeks:
+                  - { start: "2026-01-05", end: "2026-01-11" }
+                  - { start: "2026-01-12", end: "2026-01-18" }
+                people:
+                  - { id: 1, name: "Ana Ferreira", weeklyHours: 40, allocated: [46, 5] }
+                  - { id: 5, name: "Eli Nakamura", weeklyHours: 0, allocated: [20, 0] }
+        "400":
+          description: |
+            `from` or `to` is missing or not a date, `from` is after `to`, or the
+            widened range covers more than 53 weeks.
           content:
             text/plain:
               schema:
                 type: string
+              example: range must cover at most 53 weeks
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/people/{id}:
+    patch:
+      operationId: updatePerson
+      summary: Change a person's weekly hours
+      description: |
+        Updates the person's capacity. Only `weeklyHours` can change today; the body
+        must not contain other fields, so a misspelt field fails instead of being
+        ignored. Responds with the updated person, which is all a client needs to
+        keep a loaded capacity grid correct: allocations don't change, and capacity
+        for every week is `weeklyHours`.
+
+        Last write wins; there is no version check.
+      tags: [People]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePerson"
+            example:
+              weeklyHours: 32
+      responses:
+        "200":
+          description: The person after the update.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Person"
+              example:
+                id: 1
+                name: Ana Ferreira
+                weeklyHours: 32
+        "400":
+          description: The id is not a positive integer, or the body is not valid.
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: weeklyHours must be between 0 and 168
+        "404":
+          description: No person has this id.
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: person not found
+        "500":
+          $ref: "#/components/responses/InternalError"
 
 components:
+  responses:
+    InternalError:
+      description: The database query failed.
+      content:
+        text/plain:
+          schema:
+            type: string
+
   schemas:
     Health:
       type: object
@@ -41,3 +171,74 @@ components:
         people:
           type: integer
           description: Number of rows in `people`.
+
+    CapacityResponse:
+      type: object
+      required: [weeks, people]
+      properties:
+        weeks:
+          type: array
+          description: The weeks covered, in order. At most 53.
+          items:
+            $ref: "#/components/schemas/Week"
+        people:
+          type: array
+          description: Every person, sorted by name.
+          items:
+            $ref: "#/components/schemas/PersonCapacity"
+
+    Week:
+      type: object
+      required: [start, end]
+      properties:
+        start:
+          type: string
+          format: date
+          description: The Monday.
+        end:
+          type: string
+          format: date
+          description: The Sunday.
+
+    PersonCapacity:
+      type: object
+      required: [id, name, weeklyHours, allocated]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        weeklyHours:
+          type: number
+          minimum: 0
+          description: Capacity, in hours, for every week.
+        allocated:
+          type: array
+          description: Allocated hours per week, positionally matching `weeks`.
+          items:
+            type: number
+            minimum: 0
+
+    Person:
+      type: object
+      required: [id, name, weeklyHours]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        weeklyHours:
+          type: number
+          minimum: 0
+          maximum: 168
+
+    UpdatePerson:
+      type: object
+      required: [weeklyHours]
+      additionalProperties: false
+      properties:
+        weeklyHours:
+          type: number
+          minimum: 0
+          maximum: 168
+          description: Hours per week. Decimals are fine.
