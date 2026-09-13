@@ -8,6 +8,12 @@ Step 1:
     - Setting up theming to make it look nicer
     - Setting up TDD, test driven development 
 
+Step 2: 
+- Setting up the API
+  - Add GET /api/capactiy 
+  - Add PATCH /api/people/{id} and add them in the api docs
+
+- Another agent in meantime is preparing the contract / handshake beteween BE / FE. so building an dpreparing the user interface
 
 ## What did the spec not tell you?
 
@@ -18,7 +24,9 @@ how your API is design I think its improtant
 - Validation: spec didn't specify a validation strategy. I want to do validation on both side FE & BE so that we have
 isolation and not trusting one side. So I'd use Zod to validate the schema on the FE. 
 - Tests: spec didn't specify test coverage, unit/integration/e2e test? 
-- 
+- display in a week range. But should it be possible in a month or ssomething. in day? what is a week range
+- should we write on which project the person is busy so that we get a celarer overivew?
+
 
 ## What did you notice that looked wrong?
 
@@ -31,8 +39,13 @@ it, we want to know you saw it.
 
 One concrete example. Every real session has one.
 
--
+- on refresh it starts from 29 december for some reason 
+- not a clear table (where should we edit this team capacity)
+- not clear ui on where to edit 
+- not sortable table 
+- not to good for the eye
+- Did not did a clear overview of the days, took lot of space for the persons and not on the days which was not very usuable / visible by hear
 
 ## What would you do differently with a week?
 
--
+- 

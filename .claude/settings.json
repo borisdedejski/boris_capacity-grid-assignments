@@ -1,0 +1,5 @@
+{
+  "enabledPlugins": {
+    "tanstack-ai@tanstack-ai": true
+  }
+}

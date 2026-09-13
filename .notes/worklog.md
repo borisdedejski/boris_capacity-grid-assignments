@@ -38,3 +38,25 @@ left unfinished. Append as you go; a line or two per entry is right.
 - PATCH body is `{"weeklyHours": n}`, 0–168, unknown fields rejected so `weekly_hours` fails loudly instead of no-op'ing. Returns the updated person only: allocations don't change and capacity for every week is `weeklyHours`, so the grid can patch its cached row. How the grid does that is decided in the grid step.
 - Errors stay plain text (`http.Error`), matching the health handler and the existing `fetchJson` client. DB errors are logged and the client gets "internal error".
 - Left out: optimistic concurrency on PATCH (last write wins), and a request timeout on the capacity query. Both are one-liners once there's a reason.
+
+## 2026-09-13 — Grid: view, navigate, edit
+
+- After a save, the grid patches what it already has. The mutation takes the person the API returns and writes `weeklyHours` into every cached capacity range (`setQueriesData` on the `['capacity']` prefix). Allocations don't depend on weekly hours, so no refetch; not optimistic, because a ~10 ms request doesn't earn a rollback path. A refetch of 500 rows for one field felt wasteful, and the response is authoritative anyway.
+- Cell states: red for allocated > weeklyHours (shows the overage in hours), amber for exactly full, muted dash for nothing scheduled. Percent only when capacity > 0; with 0 capacity any allocation is over and there is no ratio to show.
+- Navigation lives in the store: `shiftWeeks(±1)` keeps the range length, date inputs set it outright, presets (4/8/13 wk, Today) snap to a Monday. The store doesn't validate; from > to or > 53 weeks surfaces as the API's 400 text in the grid, with a retry button.
+- `keepPreviousData` so stepping through weeks fades the old grid instead of blanking it. `staleTime` 30 s so a back-and-forth doesn't refetch every time.
+- "Over-allocated only" filter and the team footer row are plain component state; they belong to the grid, not the shared range.
+- The `App.tsx` "{from} to {to}" line is kept as-is: an existing test asserts it.
+- shadcn Button + Input added via the CLI in the container (first components that a feature needed).
+- Not verified in a browser this session (built without a screenshot tool); tsc passes and the dev server serves the modules. No new tests: those come next in a separate session.
+
+## 2026-09-13 — Grid on TanStack Table, editing in a popover, opens on today
+
+- Bug: the grid opened on 2025-12-29 because the store default was a hard-coded range. It now opens on the Monday of the current week, four weeks ahead. `App.test.tsx` asserts the old literal range and needs updating (tests are a separate session).
+- TanStack Table `@tanstack/react-table` 9.2.4 (latest at install). v9 is not the v8 API most examples show: `useTable`, features registered with `tableFeatures`, column options `sortFn`/`filterFn`. The package ships its own `skills/` folder and the core package has one per feature; those, plus the installed `.d.ts`, are what the grid was written from. Only sorting, global filtering and column filtering are registered.
+- Table state stays inside the table; the toolbar calls `table.setGlobalFilter` and `column.setFilterValue` (feature methods) rather than controlling slices from React. Rows are the query result mapped once to add `peak` (busiest week / capacity) so sorting by "most over-allocated" is one click and the over-only switch is a column filter, not a second data copy.
+- Editing: the Capacity column is a bordered button with a pencil (the earlier hover-only pencil was invisible). It opens a popover with the number, presets 20/24/32/40, Save/Cancel; double-clicking a row opens the same popover. One editor open at a time via a small context above the table.
+- Over-allocation: red cell tint, red text, a "+6 h" badge with the overage, and a utilization bar under every number so under/full/over reads at a glance. Peak column shows ∞ for hours against zero capacity.
+- No dark-mode variants on the red/amber classes: the app has no theme toggle (see the bootstrap entry).
+- Impeccable skill reported no PRODUCT.md and an available update (v4.3.1); skipped both to keep moving, worth a decision later.
+- Still not looked at in a browser this session: tsc passes and Vite transforms every module, but the visual check is the next thing to do.
